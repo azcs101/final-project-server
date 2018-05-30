@@ -44,6 +44,8 @@ GET /?page=2&search=Galaxy
 }
 ```
 
+---
+
 #### `POST /` -> Insert new movie
 
 Body: FormData
@@ -55,6 +57,8 @@ Error:
 * spec: ErrorSpec
 * error codes:
     * 400 -> Bad Request (e.g "Title not found")
+
+---
 
 #### `GET /:id` -> Fetch movie by ID
 
@@ -79,6 +83,8 @@ GET /2
 }
 ```
 
+---
+
 #### `PUT /:id` -> Update movie
 
 Body: FormData
@@ -94,6 +100,8 @@ Error:
     * 400 -> Bad Request
 
 *Note: This method can update multiple fields. Fields that are not present in request body will NOT removed; just ignored*
+
+---
 
 #### `DELETE /:id` -> Delete movie
 

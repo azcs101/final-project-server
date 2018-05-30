@@ -8,7 +8,6 @@ const storage = multer.diskStorage({
         cb(null, path.resolve(__dirname, 'posters'))
     },
     filename: (req, file, cb) => {
-        console.log(file);
         cb(null, `${Date.now()}-${file.originalname}`)
     }
 });
@@ -24,6 +23,12 @@ try {
     data = [];
 }
 
+const getIncrement = () => data.length > 0 ? data[data.length - 1].id + 1 : 1;
+
+const persistData = (cb) => {
+    fs.writeFile(path.resolve(__dirname, 'data.json'), JSON.stringify(data), 'utf8', cb);
+}
+
 const pageSize = 5;
 
 const app = express(bodyParser.urlencoded({ extended: true }));
@@ -36,15 +41,17 @@ app.get('/', (req, res) => {
     if (page > totalPages) {
         page = totalPages;
     }
-    const pagedData = data.slice(pageSize * (page - 1), page * pageSize);
-    const pagination = {};
-    if (page < totalPages) {
-        pagination.next = page + 1;
-    }
+    const pagedData = data.slice(pageSize * (page - 1), page * pageSize).map(({ plot, ...rest }) => rest);
+    const pagination = { prev: null, next: null };
 
     if (page > 1) {
         pagination.prev = page - 1;
     }
+
+    if (page < totalPages) {
+        pagination.next = page + 1;
+    }
+
     res.send({
         data: pagedData,
         pagination
@@ -77,13 +84,14 @@ app.post('/', upload.single('poster'), (req, res) => {
         }
 
         const newData = {
-            id: data[data.length - 1].id + 1, title, year, plot, genre, poster: `/posters/${file.filename}`
+            id: getIncrement(), title, year, plot, genre, poster: `/posters/${file.filename}`
         };
 
         data.push(newData);
-
-        res.send({
-            id: newData.id
+        persistData(() => {
+            res.send({
+                id: newData.id
+            });
         });
     } catch (error) {
         res.status(400);

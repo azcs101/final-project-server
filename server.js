@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const path = require('path');
 
+const { Model } = require('./model');
 const { catchHTTPError } = require('./errors.js');
 
 const storage = multer.diskStorage({
@@ -16,34 +17,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-const fs = require('fs');
-
-let data = [];
-try {
-    data = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'data.json'), 'utf8'));
-} catch (e) {
-    data = [];
-}
-
-const getIncrement = () => data.length > 0 ? data[data.length - 1].id + 1 : 1;
-
-const persistData = (cb) => {
-    fs.writeFile(path.resolve(__dirname, 'data.json'), JSON.stringify(data), 'utf8', cb);
-}
-
-const pageSize = 10;
-
+const model = new Model();
 const app = express(bodyParser.urlencoded({ extended: true }));
 
 app.use('/posters', express.static(path.resolve(__dirname, 'posters')));
 
 app.get('/', (req, res) => {
     let page = req.query.page && req.query.page > 0 ? parseInt(req.query.page) : 1;
-    const totalPages = Math.ceil(data.length / pageSize);
+    const totalPages = model.totalPages();
     if (page > totalPages) {
         page = totalPages;
     }
-    const pagedData = data.slice(pageSize * (page - 1), page * pageSize).map(({ plot, ...rest }) => rest);
+    const pagedData = model.getPagedData(page);
     const pagination = { prev: null, next: null };
 
     if (page > 1) {
@@ -62,40 +47,13 @@ app.get('/', (req, res) => {
 
 app.post('/', upload.single('poster'), (req, res) => {
     try {
-
         if (!req.body) {
             throw { message: 'Empty', status: 400 };
         }
 
-        const { title, year, plot, genre } = req.body;
-        const file = req.file;
-
-        if (!title) {
-            throw { message: 'No title', status: 400 };
-        }
-
-        if (!year) {
-            throw { message: 'No year', status: 400 };
-        }
-
-        if (!plot) {
-            throw { message: 'No plot', status: 400 };
-        }
-
-        if (!genre) {
-            throw { message: 'No genre', status: 400 };
-        }
-
-        if (!file) {
-            throw { message: 'No poster', status: 400 };
-        }
-
-        const newData = {
-            id: getIncrement(), title, year, plot, genre, poster: `/posters/${file.filename}`
-        };
-
-        data.push(newData);
-        persistData(() => {
+        model.insert({
+            ...req.body, file: req.file
+        }, (newData) => {
             res.send(newData);
         });
     } catch (error) {
@@ -105,60 +63,23 @@ app.post('/', upload.single('poster'), (req, res) => {
 
 app.get('/:id', (req, res) => {
     try {
-        const movieId = parseInt(req.params.id);
-        const found = data.find(e => e.id === movieId);
-        if (found === undefined) {
-            throw { message: 'Not found', status: 404 };
-        }
-
+        const found = model.getMovieById(parseInt(req.params.id));
         res.send(found);
     } catch (error) {
         catchHTTPError(res, error);
     }
 });
 
-
 app.put('/:id', upload.single('poster'), (req, res) => {
     try {
-        const movieId = parseInt(req.params.id);
-        const found = data.findIndex(e => e.id === movieId);
-        if (found === -1) {
-            throw { message: 'Not found', status: 404 };
-        }
-
         if (!req.body) {
             throw { message: 'Empty', status: 400 };
         }
 
-        const { id, title, year, plot, genre } = req.body;
-        const file = req.file;
-
-        if (id) {
-            throw { message: 'Cannot change ID', status: 400 };
-        }
-
-        if (title) {
-            data[found].title = title;
-        }
-
-        if (year) {
-            data[found].year = year;
-        }
-
-        if (plot) {
-            data[found].plot = plot;
-        }
-
-        if (genre) {
-            data[found].genre = genre;
-        }
-
-        if (file) {
-            data[found].poster = `/posters/${file.filename}`;
-        }
-
-        persistData(() => {
-            res.send(data[found]);
+        model.update(parseInt(req.params.id), {
+            ...req.body, file: req.file
+        }, (newData) => {
+            res.send(newData);
         });
     } catch (error) {
         catchHTTPError(res, error);
@@ -167,17 +88,9 @@ app.put('/:id', upload.single('poster'), (req, res) => {
 
 app.delete('/:id', (req, res) => {
     try {
-        const movieId = parseInt(req.params.id);
-        const found = data.findIndex(e => e.id === movieId);
-        if (found === -1) {
-            throw { message: 'Not found', status: 404 };
-        }
-
-        data.splice(found, 1);
-
-        persistData(() => {
+        model.delete(parseInt(req.params.id), () => {
             res.send({ status: 200 });
-        });
+        })
     } catch (error) {
         catchHTTPError(res, error);
     }

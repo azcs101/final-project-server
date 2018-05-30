@@ -31,7 +31,7 @@ const persistData = (cb) => {
     fs.writeFile(path.resolve(__dirname, 'data.json'), JSON.stringify(data), 'utf8', cb);
 }
 
-const pageSize = 5;
+const pageSize = 10;
 
 const app = express(bodyParser.urlencoded({ extended: true }));
 

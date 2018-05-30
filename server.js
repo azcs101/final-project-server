@@ -96,9 +96,7 @@ app.post('/', upload.single('poster'), (req, res) => {
 
         data.push(newData);
         persistData(() => {
-            res.send({
-                id: newData.id
-            });
+            res.send(newData);
         });
     } catch (error) {
         catchHTTPError(res, error);
@@ -110,7 +108,7 @@ app.get('/:id', (req, res) => {
         const movieId = parseInt(req.params.id);
         const found = data.find(e => e.id === movieId);
         if (found === undefined) {
-            throw 'Not found';
+            throw { message: 'Not found', status: 404 };
         }
 
         res.send(found);
@@ -168,8 +166,21 @@ app.put('/:id', upload.single('poster'), (req, res) => {
 });
 
 app.delete('/:id', (req, res) => {
+    try {
+        const movieId = parseInt(req.params.id);
+        const found = data.findIndex(e => e.id === movieId);
+        if (found === -1) {
+            throw { message: 'Not found', status: 404 };
+        }
 
-    res.send({});
+        data.splice(found, 1);
+
+        persistData(() => {
+            res.send({ status: 200 });
+        });
+    } catch (error) {
+        catchHTTPError(res, error);
+    }
 });
 
 app.listen(8080, () => {

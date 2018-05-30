@@ -5,5 +5,6 @@ exports.catchHTTPError = (res, error) => {
     } else {
         res.status(500);
         res.send({ message: 'Internal error', status: 500 });
+        console.error(error);
     }
 }

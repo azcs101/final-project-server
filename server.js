@@ -100,8 +100,18 @@ app.post('/', upload.single('poster'), (req, res) => {
 });
 
 app.get('/:id', (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const found = data.find(e => e.id === id);
+        if (found === undefined) {
+            throw 'Not found';
+        }
 
-    res.send({});
+        res.send(found);
+    } catch (error) {
+        res.status(404);
+        res.send({ error });
+    }
 });
 
 

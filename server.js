@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const path = require('path');
 
+const { catchHTTPError } = require('./errors.js');
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.resolve(__dirname, 'posters'))
@@ -59,28 +61,33 @@ app.get('/', (req, res) => {
 });
 
 app.post('/', upload.single('poster'), (req, res) => {
-    const { title, year, plot, genre } = req.body;
-    const file = req.file;
-
     try {
+
+        if (!req.body) {
+            throw { message: 'Empty', status: 400 };
+        }
+
+        const { title, year, plot, genre } = req.body;
+        const file = req.file;
+
         if (!title) {
-            throw 'No title';
+            throw { message: 'No title', status: 400 };
         }
 
         if (!year) {
-            throw 'No year';
+            throw { message: 'No year', status: 400 };
         }
 
         if (!plot) {
-            throw 'No plot';
+            throw { message: 'No plot', status: 400 };
         }
 
         if (!genre) {
-            throw 'No genre';
+            throw { message: 'No genre', status: 400 };
         }
 
         if (!file) {
-            throw 'No poster';
+            throw { message: 'No poster', status: 400 };
         }
 
         const newData = {
@@ -94,30 +101,70 @@ app.post('/', upload.single('poster'), (req, res) => {
             });
         });
     } catch (error) {
-        res.status(400);
-        res.send({ error });
+        catchHTTPError(res, error);
     }
 });
 
 app.get('/:id', (req, res) => {
     try {
-        const id = parseInt(req.params.id);
-        const found = data.find(e => e.id === id);
+        const movieId = parseInt(req.params.id);
+        const found = data.find(e => e.id === movieId);
         if (found === undefined) {
             throw 'Not found';
         }
 
         res.send(found);
     } catch (error) {
-        res.status(404);
-        res.send({ error });
+        catchHTTPError(res, error);
     }
 });
 
 
-app.put('/:id', (req, res) => {
+app.put('/:id', upload.single('poster'), (req, res) => {
+    try {
+        const movieId = parseInt(req.params.id);
+        const found = data.findIndex(e => e.id === movieId);
+        if (found === -1) {
+            throw { message: 'Not found', status: 404 };
+        }
 
-    res.send({});
+        if (!req.body) {
+            throw { message: 'Empty', status: 400 };
+        }
+
+        const { id, title, year, plot, genre } = req.body;
+        const file = req.file;
+
+        if (id) {
+            throw { message: 'Cannot change ID', status: 400 };
+        }
+
+        if (title) {
+            data[found].title = title;
+        }
+
+        if (year) {
+            data[found].year = year;
+        }
+
+        if (plot) {
+            data[found].plot = plot;
+        }
+
+        if (genre) {
+            data[found].genre = genre;
+        }
+
+        if (file) {
+            data[found].poster = `/posters/${file.filename}`;
+        }
+
+        persistData(() => {
+            res.send(data[found]);
+        });
+    } catch (error) {
+        catchHTTPError(res, error);
+    }
 });
 
 app.delete('/:id', (req, res) => {

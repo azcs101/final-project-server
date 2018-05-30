@@ -24,25 +24,9 @@ app.use('/posters', express.static(path.resolve(__dirname, 'posters')));
 
 app.get('/', (req, res) => {
     let page = req.query.page && req.query.page > 0 ? parseInt(req.query.page) : 1;
-    const totalPages = model.totalPages();
-    if (page > totalPages) {
-        page = totalPages;
-    }
-    const pagedData = model.getPagedData(page);
-    const pagination = { prev: null, next: null };
-
-    if (page > 1) {
-        pagination.prev = page - 1;
-    }
-
-    if (page < totalPages) {
-        pagination.next = page + 1;
-    }
-
-    res.send({
-        data: pagedData,
-        pagination
-    });
+    const search = req.query.search ? req.query.search : null;
+    const pagedData = model.getPagedData(page, search);
+    res.send(pagedData);
 });
 
 app.post('/', upload.single('poster'), (req, res) => {

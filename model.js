@@ -16,8 +16,32 @@ class Model {
         fs.writeFile(path.resolve(__dirname, 'data.json'), JSON.stringify(this.data), 'utf8', cb);
     }
 
-    getPagedData(page) {
-        return this.data.slice(Model.pageSize * (page - 1), page * Model.pageSize).map(({ plot, ...rest }) => rest);
+    getPagedData(page, search) {
+        const pagination = { prev: null, next: null };
+
+        let data = this.data;
+
+        if (search) {
+            data = data.filter(e => e.title.includes(search));    
+        }
+
+        const totalPages = this.totalPages(data);
+
+        if (page > totalPages) {
+            page = totalPages;
+        }
+
+        if (page > 1) {
+            pagination.prev = page - 1;
+        }
+
+        if (page < totalPages) {
+            pagination.next = page + 1;
+        }
+
+        data = data.slice(Model.pageSize * (page - 1), page * Model.pageSize).map(({ plot, ...rest }) => rest);
+
+        return { data, pagination };
     }
 
     getMovieById(id) {
@@ -111,8 +135,11 @@ class Model {
         return this.data.length > 0 ? this.data[this.data.length - 1].id + 1 : 1;
     }
 
-    totalPages() {
-        return Math.ceil(this.data.length / Model.pageSize);
+    totalPages(data = null) {
+        if (!data) {
+            data = this.data;
+        }
+        return Math.ceil(data.length / Model.pageSize);
     }
 }
 

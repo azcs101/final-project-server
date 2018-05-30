@@ -93,6 +93,8 @@ Error:
     * 404 -> Not Found
     * 400 -> Bad Request
 
+*Note: This method can update multiple fields. Fields that are not present in request body will NOT removed; just ignored*
+
 #### `DELETE /:id` -> Delete movie
 
 Output:
